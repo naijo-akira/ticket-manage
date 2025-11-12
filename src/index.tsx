@@ -20,6 +20,16 @@ app.use('/api/*', cors())
 app.use(renderer)
 
 // ======================
+// ユーティリティ関数
+// ======================
+function getCurrentJSTTimestamp() {
+  // 日本時間（JST = UTC+9）のタイムスタンプを 'YYYY-MM-DD HH:MM:SS' 形式で取得
+  const now = new Date();
+  const jst = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  return jst.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+// ======================
 // LINE通知関数
 // ======================
 async function sendLineNotification(
@@ -114,17 +124,19 @@ app.post('/api/customers', async (c) => {
       return c.json({ error: 'Name is required' }, 400)
     }
 
+    const jstNow = getCurrentJSTTimestamp()
+    
     const result = await c.env.DB.prepare(
-      'INSERT INTO customers (name, phone, email, ticket_count) VALUES (?, ?, ?, ?)'
-    ).bind(name, phone || null, email || null, ticket_count || 0).run()
+      'INSERT INTO customers (name, phone, email, ticket_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(name, phone || null, email || null, ticket_count || 0, jstNow, jstNow).run()
 
     const customerId = result.meta.last_row_id
 
     // 初期チケットがある場合は履歴に記録
     if (ticket_count && ticket_count > 0) {
       await c.env.DB.prepare(
-        'INSERT INTO ticket_history (customer_id, change_amount, previous_count, new_count, note) VALUES (?, ?, ?, ?, ?)'
-      ).bind(customerId, ticket_count, 0, ticket_count, '初回登録').run()
+        'INSERT INTO ticket_history (customer_id, change_amount, previous_count, new_count, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(customerId, ticket_count, 0, ticket_count, '初回登録', jstNow).run()
     }
 
     return c.json({ 
@@ -168,15 +180,17 @@ app.post('/api/customers/:id/tickets', async (c) => {
       return c.json({ error: 'Insufficient tickets' }, 400)
     }
 
+    const jstNow = getCurrentJSTTimestamp()
+    
     // チケット数を更新
     await c.env.DB.prepare(
-      'UPDATE customers SET ticket_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(newCount, id).run()
+      'UPDATE customers SET ticket_count = ?, updated_at = ? WHERE id = ?'
+    ).bind(newCount, jstNow, id).run()
 
     // 履歴を記録
     await c.env.DB.prepare(
-      'INSERT INTO ticket_history (customer_id, change_amount, previous_count, new_count, note) VALUES (?, ?, ?, ?, ?)'
-    ).bind(id, change_amount, previousCount, newCount, note || null).run()
+      'INSERT INTO ticket_history (customer_id, change_amount, previous_count, new_count, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(id, change_amount, previousCount, newCount, note || null, jstNow).run()
 
     // LINE通知を送信
     await sendLineNotification(

@@ -308,12 +308,15 @@ function escapeHtml(text) {
 }
 
 function formatDate(dateStr) {
-  const date = new Date(dateStr);
+  // SQLiteからの日付文字列を日本時間として解釈
+  // データベースの日付は 'YYYY-MM-DD HH:MM:SS' 形式
+  const date = new Date(dateStr + ' UTC'); // UTCとして解釈してから変換
   return date.toLocaleString('ja-JP', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Asia/Tokyo'
   });
 }
