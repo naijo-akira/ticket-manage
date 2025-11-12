@@ -214,10 +214,6 @@ app.delete('/api/customers/:id', async (c) => {
 app.get('/', (c) => {
   return c.render(
     <div class="container">
-      <header>
-        <h1>🎫 ダンススクール チケット管理</h1>
-      </header>
-
       <div class="main-content">
         {/* 顧客一覧 */}
         <div class="section">

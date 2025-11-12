@@ -16,21 +16,6 @@ body {
   margin: 0 auto;
 }
 
-header {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
-  text-align: center;
-}
-
-header h1 {
-  font-size: 28px;
-  color: #333;
-  font-weight: bold;
-}
-
 .main-content {
   display: grid;
   grid-template-columns: 1fr;
