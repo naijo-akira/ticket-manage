@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { serveStatic } from 'hono/cloudflare-workers'
 import { renderer } from './renderer'
 
 type Bindings = {
@@ -8,6 +9,9 @@ type Bindings = {
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
+
+// 静的ファイル配信
+app.use('/static/*', serveStatic({ root: './' }))
 
 // CORS設定
 app.use('/api/*', cors())
