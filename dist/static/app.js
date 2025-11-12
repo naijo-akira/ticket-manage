@@ -6,8 +6,28 @@ let currentCustomer = null;
 // 初期化
 // ======================
 document.addEventListener('DOMContentLoaded', () => {
+  showCustomerListScreen();
   loadCustomers();
 });
+
+// ======================
+// 画面切り替え
+// ======================
+function showCustomerListScreen() {
+  document.getElementById('customerListScreen').classList.add('active');
+  document.getElementById('customerDetailScreen').classList.remove('active');
+}
+
+function showCustomerDetailScreen() {
+  document.getElementById('customerListScreen').classList.remove('active');
+  document.getElementById('customerDetailScreen').classList.add('active');
+}
+
+function backToCustomerList() {
+  showCustomerListScreen();
+  currentCustomer = null;
+  loadCustomers(); // データを再読み込み
+}
 
 // ======================
 // 顧客一覧の読み込み
@@ -32,18 +52,39 @@ function renderCustomerList() {
     return;
   }
 
-  container.innerHTML = customers.map(customer => `
-    <div class="customer-card" onclick="loadCustomerDetail(${customer.id})">
-      <div class="customer-name">${escapeHtml(customer.name)}</div>
-      <div class="customer-info">
-        ${customer.phone ? `<span>📞 ${escapeHtml(customer.phone)}</span>` : ''}
-        ${customer.email ? `<span>📧 ${escapeHtml(customer.email)}</span>` : ''}
-      </div>
-      <div class="ticket-badge">
-        🎫 チケット: ${customer.ticket_count}枚
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = `
+    <table class="customer-table">
+      <thead>
+        <tr>
+          <th>氏名</th>
+          <th>連絡先</th>
+          <th class="ticket-cell">チケット残数</th>
+          <th class="action-cell">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${customers.map(customer => `
+          <tr onclick="loadCustomerDetail(${customer.id})">
+            <td class="name-cell">${escapeHtml(customer.name)}</td>
+            <td class="contact-cell">
+              ${customer.phone ? `📞 ${escapeHtml(customer.phone)}` : ''}
+              ${customer.phone && customer.email ? '<br>' : ''}
+              ${customer.email ? `📧 ${escapeHtml(customer.email)}` : ''}
+              ${!customer.phone && !customer.email ? '未登録' : ''}
+            </td>
+            <td class="ticket-cell">
+              <span class="ticket-badge">${customer.ticket_count}枚</span>
+            </td>
+            <td class="action-cell">
+              <button onclick="event.stopPropagation(); loadCustomerDetail(${customer.id})" class="btn btn-primary" style="font-size: 12px; padding: 6px 12px;">
+                詳細
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 // ======================
@@ -55,8 +96,7 @@ async function loadCustomerDetail(customerId) {
     const data = await response.json();
     currentCustomer = data.customer;
     renderCustomerDetail(data.customer, data.history);
-    
-    document.getElementById('customerDetailSection').style.display = 'block';
+    showCustomerDetailScreen();
   } catch (error) {
     console.error('Failed to load customer detail:', error);
     alert('顧客詳細の読み込みに失敗しました');
@@ -68,11 +108,11 @@ function renderCustomerDetail(customer, history) {
   
   container.innerHTML = `
     <div class="detail-card">
+      <h3 style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 20px;">
+        ${escapeHtml(customer.name)}
+      </h3>
+      
       <div class="detail-info">
-        <div class="info-item">
-          <div class="info-label">氏名</div>
-          <div class="info-value">${escapeHtml(customer.name)}</div>
-        </div>
         <div class="info-item">
           <div class="info-label">電話番号</div>
           <div class="info-value">${customer.phone ? escapeHtml(customer.phone) : '未登録'}</div>
@@ -81,10 +121,10 @@ function renderCustomerDetail(customer, history) {
           <div class="info-label">メールアドレス</div>
           <div class="info-value">${customer.email ? escapeHtml(customer.email) : '未登録'}</div>
         </div>
-        <div class="info-item">
+        <div class="info-item" style="grid-column: 1 / -1;">
           <div class="info-label">現在のチケット</div>
           <div class="info-value">
-            <span class="ticket-badge">${customer.ticket_count}枚</span>
+            <span class="ticket-badge" style="font-size: 24px; padding: 12px 24px;">${customer.ticket_count}枚</span>
           </div>
         </div>
       </div>
@@ -125,11 +165,6 @@ function renderCustomerDetail(customer, history) {
       </div>
     </div>
   `;
-}
-
-function closeCustomerDetail() {
-  document.getElementById('customerDetailSection').style.display = 'none';
-  currentCustomer = null;
 }
 
 // ======================
@@ -214,7 +249,6 @@ document.getElementById('ticketForm').addEventListener('submit', async (e) => {
 
     if (response.ok) {
       closeTicketModal();
-      await loadCustomers();
       await loadCustomerDetail(customerId);
       alert('チケットを更新しました');
     } else {
@@ -241,9 +275,8 @@ async function deleteCustomer(customerId) {
     });
 
     if (response.ok) {
-      closeCustomerDetail();
-      await loadCustomers();
       alert('顧客を削除しました');
+      backToCustomerList();
     } else {
       alert('削除に失敗しました');
     }

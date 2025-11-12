@@ -214,25 +214,30 @@ app.delete('/api/customers/:id', async (c) => {
 app.get('/', (c) => {
   return c.render(
     <div class="container">
-      <div class="main-content">
-        {/* 顧客一覧 */}
-        <div class="section">
+      {/* 顧客一覧画面 */}
+      <div id="customerListScreen" class="screen">
+        <div class="section full-width">
           <div class="section-header">
-            <h2>顧客一覧</h2>
+            <h2>🎫 顧客一覧</h2>
             <button onclick="showAddCustomerModal()" class="btn btn-primary">
               ➕ 新規顧客登録
             </button>
           </div>
-          <div id="customerList" class="customer-list">
+          <div id="customerList">
             <p class="loading">読み込み中...</p>
           </div>
         </div>
+      </div>
 
-        {/* 顧客詳細 */}
-        <div class="section" id="customerDetailSection" style="display: none;">
+      {/* 顧客詳細画面 */}
+      <div id="customerDetailScreen" class="screen" style="display: none;">
+        <div class="section full-width">
           <div class="section-header">
-            <h2>顧客詳細</h2>
-            <button onclick="closeCustomerDetail()" class="btn btn-secondary">✕ 閉じる</button>
+            <button onclick="backToCustomerList()" class="btn btn-secondary">
+              ← 一覧に戻る
+            </button>
+            <h2>👤 顧客詳細</h2>
+            <div></div>
           </div>
           <div id="customerDetail"></div>
         </div>

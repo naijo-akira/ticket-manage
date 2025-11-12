@@ -16,16 +16,12 @@ body {
   margin: 0 auto;
 }
 
-.main-content {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
+.screen {
+  display: none;
 }
 
-@media (min-width: 1024px) {
-  .main-content {
-    grid-template-columns: 1fr 1fr;
-  }
+.screen.active {
+  display: block;
 }
 
 .section {
@@ -33,6 +29,12 @@ body {
   padding: 24px;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.full-width {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .section-header {
@@ -50,39 +52,57 @@ body {
   color: #333;
 }
 
-.customer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* テーブルスタイル */
+.customer-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
 }
 
-.customer-card {
+.customer-table thead {
   background: #f9fafb;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
-.customer-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
-}
-
-.customer-name {
-  font-size: 18px;
+.customer-table th {
+  padding: 12px;
+  text-align: left;
   font-weight: bold;
   color: #333;
-  margin-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 14px;
 }
 
-.customer-info {
-  display: flex;
-  gap: 16px;
+.customer-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
   font-size: 14px;
+}
+
+.customer-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.customer-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.customer-table .name-cell {
+  font-weight: 600;
+  color: #333;
+}
+
+.customer-table .contact-cell {
   color: #6b7280;
-  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.customer-table .ticket-cell {
+  text-align: center;
+}
+
+.customer-table .action-cell {
+  text-align: center;
 }
 
 .ticket-badge {
