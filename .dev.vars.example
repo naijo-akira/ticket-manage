@@ -1,0 +1,5 @@
+# LINE Messaging API設定（本番環境用）
+# LINE Developers Console (https://developers.line.biz/console/) で取得
+# チャネルアクセストークンを設定してください
+
+LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token_here
