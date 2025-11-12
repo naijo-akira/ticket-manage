@@ -215,7 +215,7 @@ app.get('/', (c) => {
   return c.render(
     <div class="container">
       {/* 顧客一覧画面 */}
-      <div id="customerListScreen" class="screen">
+      <div id="customerListScreen" class="screen active">
         <div class="section full-width">
           <div class="section-header">
             <h2>🎫 顧客一覧</h2>
