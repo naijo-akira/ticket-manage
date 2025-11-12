@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "dance-ticket-manager",
   "compatibility_date": "2025-11-12",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "dance-ticket-db",
-      "database_id": "local-dev-db"
+      "database_id": "c3cca33d-27a9-4a93-b2fc-6c22df559143"
     }
   ]
 }
