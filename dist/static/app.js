@@ -19,8 +19,14 @@ function showCustomerListScreen() {
 }
 
 function showCustomerDetailScreen() {
-  document.getElementById('customerListScreen').classList.remove('active');
-  document.getElementById('customerDetailScreen').classList.add('active');
+  console.log('showCustomerDetailScreen called');
+  const listScreen = document.getElementById('customerListScreen');
+  const detailScreen = document.getElementById('customerDetailScreen');
+  console.log('List screen element:', listScreen);
+  console.log('Detail screen element:', detailScreen);
+  listScreen.classList.remove('active');
+  detailScreen.classList.add('active');
+  console.log('Classes updated - list:', listScreen.className, 'detail:', detailScreen.className);
 }
 
 function backToCustomerList() {
@@ -91,12 +97,17 @@ function renderCustomerList() {
 // 顧客詳細の読み込み
 // ======================
 async function loadCustomerDetail(customerId) {
+  console.log('loadCustomerDetail called with ID:', customerId);
   try {
     const response = await fetch(`/api/customers/${customerId}`);
+    console.log('API response status:', response.status);
     const data = await response.json();
+    console.log('Customer data:', data);
     currentCustomer = data.customer;
     renderCustomerDetail(data.customer, data.history);
+    console.log('About to show detail screen');
     showCustomerDetailScreen();
+    console.log('Detail screen should be visible now');
   } catch (error) {
     console.error('Failed to load customer detail:', error);
     alert('顧客詳細の読み込みに失敗しました');

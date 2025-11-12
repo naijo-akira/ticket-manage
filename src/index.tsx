@@ -234,7 +234,7 @@ app.get('/', (c) => {
       </div>
 
       {/* 顧客詳細画面 */}
-      <div id="customerDetailScreen" class="screen" style="display: none;">
+      <div id="customerDetailScreen" class="screen">
         <div class="section full-width">
           <div class="section-header">
             <button onclick="backToCustomerList()" class="btn btn-secondary">
