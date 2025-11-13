@@ -19,14 +19,8 @@ function showCustomerListScreen() {
 }
 
 function showCustomerDetailScreen() {
-  console.log('showCustomerDetailScreen called');
-  const listScreen = document.getElementById('customerListScreen');
-  const detailScreen = document.getElementById('customerDetailScreen');
-  console.log('List screen element:', listScreen);
-  console.log('Detail screen element:', detailScreen);
-  listScreen.classList.remove('active');
-  detailScreen.classList.add('active');
-  console.log('Classes updated - list:', listScreen.className, 'detail:', detailScreen.className);
+  document.getElementById('customerListScreen').classList.remove('active');
+  document.getElementById('customerDetailScreen').classList.add('active');
 }
 
 function backToCustomerList() {
@@ -97,17 +91,12 @@ function renderCustomerList() {
 // 顧客詳細の読み込み
 // ======================
 async function loadCustomerDetail(customerId) {
-  console.log('loadCustomerDetail called with ID:', customerId);
   try {
     const response = await fetch(`/api/customers/${customerId}`);
-    console.log('API response status:', response.status);
     const data = await response.json();
-    console.log('Customer data:', data);
     currentCustomer = data.customer;
     renderCustomerDetail(data.customer, data.history);
-    console.log('About to show detail screen');
     showCustomerDetailScreen();
-    console.log('Detail screen should be visible now');
   } catch (error) {
     console.error('Failed to load customer detail:', error);
     alert('顧客詳細の読み込みに失敗しました');
@@ -131,6 +120,10 @@ function renderCustomerDetail(customer, history) {
         <div class="info-item">
           <div class="info-label">メールアドレス</div>
           <div class="info-value">${customer.email ? escapeHtml(customer.email) : '未登録'}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">LINE通知</div>
+          <div class="info-value">${customer.line_user_id ? '✅ 設定済み' : '❌ 未設定'}</div>
         </div>
         <div class="info-item" style="grid-column: 1 / -1;">
           <div class="info-label">現在のチケット</div>
@@ -198,7 +191,8 @@ document.getElementById('addCustomerForm').addEventListener('submit', async (e) 
     name: formData.get('name'),
     phone: formData.get('phone'),
     email: formData.get('email'),
-    ticket_count: parseInt(formData.get('ticket_count')) || 0
+    ticket_count: parseInt(formData.get('ticket_count')) || 0,
+    line_user_id: formData.get('line_user_id') || null
   };
 
   try {

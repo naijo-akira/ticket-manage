@@ -30,16 +30,23 @@ function getCurrentJSTTimestamp() {
 }
 
 // ======================
-// LINE通知関数
+// LINE通知関数（個別送信）
 // ======================
 async function sendLineNotification(
   accessToken: string | undefined,
+  lineUserId: string | null,
   customerName: string,
   changeAmount: number,
   newCount: number
 ) {
+  // トークンまたはUser IDがない場合はスキップ
   if (!accessToken) {
     console.log('LINE_CHANNEL_ACCESS_TOKEN is not set. Skipping LINE notification.')
+    return
+  }
+
+  if (!lineUserId) {
+    console.log(`LINE User ID not set for customer: ${customerName}. Skipping LINE notification.`)
     return
   }
 
@@ -48,14 +55,15 @@ async function sendLineNotification(
     : `【チケット使用】\n${customerName}様\nチケットを${Math.abs(changeAmount)}枚使用しました。\n残り: ${newCount}枚`
 
   try {
-    // LINE Messaging APIへのブロードキャストメッセージ送信
-    const response = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+    // LINE Messaging APIへの個別メッセージ送信（Push Message）
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({
+        to: lineUserId,
         messages: [
           {
             type: 'text',
@@ -66,7 +74,10 @@ async function sendLineNotification(
     })
 
     if (!response.ok) {
-      console.error('LINE notification failed:', await response.text())
+      const errorText = await response.text()
+      console.error('LINE notification failed:', errorText)
+    } else {
+      console.log(`LINE notification sent to ${customerName} (${lineUserId})`)
     }
   } catch (error) {
     console.error('LINE notification error:', error)
@@ -118,7 +129,7 @@ app.get('/api/customers/:id', async (c) => {
 // ======================
 app.post('/api/customers', async (c) => {
   try {
-    const { name, phone, email, ticket_count } = await c.req.json()
+    const { name, phone, email, ticket_count, line_user_id } = await c.req.json()
 
     if (!name) {
       return c.json({ error: 'Name is required' }, 400)
@@ -127,8 +138,8 @@ app.post('/api/customers', async (c) => {
     const jstNow = getCurrentJSTTimestamp()
     
     const result = await c.env.DB.prepare(
-      'INSERT INTO customers (name, phone, email, ticket_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(name, phone || null, email || null, ticket_count || 0, jstNow, jstNow).run()
+      'INSERT INTO customers (name, phone, email, ticket_count, line_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(name, phone || null, email || null, ticket_count || 0, line_user_id || null, jstNow, jstNow).run()
 
     const customerId = result.meta.last_row_id
 
@@ -144,7 +155,8 @@ app.post('/api/customers', async (c) => {
       name, 
       phone, 
       email, 
-      ticket_count: ticket_count || 0 
+      ticket_count: ticket_count || 0,
+      line_user_id: line_user_id || null
     })
   } catch (error) {
     return c.json({ error: 'Failed to create customer' }, 500)
@@ -164,10 +176,10 @@ app.post('/api/customers/:id/tickets', async (c) => {
       return c.json({ error: 'change_amount is required and must not be zero' }, 400)
     }
 
-    // 現在のチケット数を取得
+    // 現在のチケット数とLINE User IDを取得
     const customer = await c.env.DB.prepare(
       'SELECT * FROM customers WHERE id = ?'
-    ).bind(id).first<{ id: number; name: string; ticket_count: number }>()
+    ).bind(id).first<{ id: number; name: string; ticket_count: number; line_user_id: string | null }>()
 
     if (!customer) {
       return c.json({ error: 'Customer not found' }, 404)
@@ -192,9 +204,10 @@ app.post('/api/customers/:id/tickets', async (c) => {
       'INSERT INTO ticket_history (customer_id, change_amount, previous_count, new_count, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'
     ).bind(id, change_amount, previousCount, newCount, note || null, jstNow).run()
 
-    // LINE通知を送信
+    // LINE通知を送信（個別送信）
     await sendLineNotification(
       c.env.LINE_CHANNEL_ACCESS_TOKEN,
+      customer.line_user_id,
       customer.name,
       change_amount,
       newCount
@@ -284,6 +297,13 @@ app.get('/', (c) => {
             <div class="form-group">
               <label>初期チケット枚数</label>
               <input type="number" name="ticket_count" min="0" value="0" />
+            </div>
+            <div class="form-group">
+              <label>LINE User ID（任意）</label>
+              <input type="text" name="line_user_id" placeholder="U1234567890abcdef..." />
+              <small style="color: #6b7280; font-size: 12px; display: block; margin-top: 4px;">
+                LINEで通知を受け取る場合は、User IDを入力してください
+              </small>
             </div>
             <div class="form-actions">
               <button type="button" onclick="closeAddCustomerModal()" class="btn btn-secondary">
