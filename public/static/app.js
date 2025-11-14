@@ -65,17 +65,17 @@ function renderCustomerList() {
       <tbody>
         ${customers.map(customer => `
           <tr onclick="loadCustomerDetail(${customer.id})">
-            <td class="name-cell">${escapeHtml(customer.name)}</td>
-            <td class="contact-cell">
+            <td class="name-cell" data-label="氏名">${escapeHtml(customer.name)}</td>
+            <td class="contact-cell" data-label="連絡先">
               ${customer.phone ? `📞 ${escapeHtml(customer.phone)}` : ''}
               ${customer.phone && customer.email ? '<br>' : ''}
               ${customer.email ? `📧 ${escapeHtml(customer.email)}` : ''}
               ${!customer.phone && !customer.email ? '未登録' : ''}
             </td>
-            <td class="ticket-cell">
+            <td class="ticket-cell" data-label="チケット残数">
               <span class="ticket-badge">${customer.ticket_count}枚</span>
             </td>
-            <td class="action-cell">
+            <td class="action-cell" data-label="操作">
               <button onclick="event.stopPropagation(); loadCustomerDetail(${customer.id})" class="btn btn-primary" style="font-size: 12px; padding: 6px 12px;">
                 詳細
               </button>
@@ -134,6 +134,9 @@ function renderCustomerDetail(customer, history) {
       </div>
       
       <div class="ticket-actions">
+        <button onclick="showEditCustomerModal()" class="btn btn-primary">
+          ✏️ 情報編集
+        </button>
         <button onclick="showTicketModal(${customer.id}, 1)" class="btn btn-success">
           ➕ チケット追加
         </button>
@@ -267,6 +270,61 @@ document.getElementById('ticketForm').addEventListener('submit', async (e) => {
 });
 
 // ======================
+// 顧客情報編集モーダル
+// ======================
+function showEditCustomerModal() {
+  if (!currentCustomer) {
+    alert('顧客情報が読み込まれていません');
+    return;
+  }
+
+  document.getElementById('editCustomerId').value = currentCustomer.id;
+  document.getElementById('editCustomerName').value = currentCustomer.name || '';
+  document.getElementById('editCustomerPhone').value = currentCustomer.phone || '';
+  document.getElementById('editCustomerEmail').value = currentCustomer.email || '';
+  document.getElementById('editCustomerLineUserId').value = currentCustomer.line_user_id || '';
+  
+  document.getElementById('editCustomerModal').classList.add('active');
+}
+
+function closeEditCustomerModal() {
+  document.getElementById('editCustomerModal').classList.remove('active');
+}
+
+document.getElementById('editCustomerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const customerId = document.getElementById('editCustomerId').value;
+  const formData = new FormData(e.target);
+  const data = {
+    name: formData.get('name'),
+    phone: formData.get('phone') || null,
+    email: formData.get('email') || null,
+    line_user_id: formData.get('line_user_id') || null
+  };
+
+  try {
+    const response = await fetch(`/api/customers/${customerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+      closeEditCustomerModal();
+      await loadCustomerDetail(customerId);
+      alert('顧客情報を更新しました');
+    } else {
+      const error = await response.json();
+      alert('更新に失敗しました: ' + error.error);
+    }
+  } catch (error) {
+    console.error('Failed to update customer:', error);
+    alert('更新に失敗しました');
+  }
+});
+
+// ======================
 // 顧客削除
 // ======================
 async function deleteCustomer(customerId) {
@@ -302,15 +360,24 @@ function escapeHtml(text) {
 }
 
 function formatDate(dateStr) {
-  // SQLiteからの日付文字列を日本時間として解釈
-  // データベースの日付は 'YYYY-MM-DD HH:MM:SS' 形式
-  const date = new Date(dateStr + ' UTC'); // UTCとして解釈してから変換
+  if (!dateStr) return '';
+  
+  // SQLiteからの日付文字列は 'YYYY-MM-DD HH:MM:SS' 形式（JST）
+  // JavaScriptのDateは 'YYYY-MM-DD HH:MM:SS' 形式をローカルタイムとして解釈するため、
+  // 'T'に置換してISO形式にしてからJSTとして扱う
+  const isoStr = dateStr.replace(' ', 'T');
+  const date = new Date(isoStr);
+  
+  // 日付が無効な場合は元の文字列を返す
+  if (isNaN(date.getTime())) {
+    return dateStr;
+  }
+  
   return date.toLocaleString('ja-JP', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Tokyo'
+    minute: '2-digit'
   });
 }

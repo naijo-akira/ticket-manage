@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #e5e7eb 0%, #f3f4f6 100%);
   min-height: 100vh;
   padding: 20px;
 }
@@ -107,7 +107,7 @@ body {
 
 .ticket-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
   color: white;
   padding: 8px 16px;
   border-radius: 20px;
@@ -226,13 +226,13 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
   color: white;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
 .btn-secondary {
@@ -344,7 +344,7 @@ form {
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #3b82f6;
 }
 
 .form-actions {
@@ -366,4 +366,214 @@ form {
   color: #6b7280;
   padding: 40px;
   font-size: 16px;
+}
+
+/* ============================================ */
+/* モバイル対応 (768px以下) */
+/* ============================================ */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    padding: 0;
+  }
+
+  .section {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  /* ヘッダーをモバイル用に調整 */
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .section-header h2 {
+    font-size: 18px;
+  }
+
+  .section-header .btn {
+    width: 100%;
+  }
+
+  /* テーブルをカードレイアウトに変換 */
+  .customer-table {
+    display: block;
+  }
+
+  .customer-table thead {
+    display: none;
+  }
+
+  .customer-table tbody {
+    display: block;
+  }
+
+  .customer-table tr {
+    display: block;
+    margin-bottom: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background: white;
+  }
+
+  .customer-table td {
+    display: block;
+    padding: 8px 0;
+    border: none;
+    text-align: left !important;
+  }
+
+  .customer-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #6b7280;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .customer-table .name-cell {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .customer-table .ticket-cell {
+    margin: 12px 0;
+  }
+
+  .customer-table .action-cell {
+    margin-top: 12px;
+  }
+
+  .ticket-badge {
+    font-size: 18px;
+    padding: 10px 20px;
+  }
+
+  /* 詳細画面の情報グリッドをシングルカラムに */
+  .detail-info {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .detail-card {
+    padding: 16px;
+  }
+
+  /* チケット操作ボタンを縦並びに */
+  .ticket-actions {
+    flex-direction: column;
+  }
+
+  .ticket-actions .btn {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+
+  /* 履歴アイテムをモバイル用に調整 */
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .history-count {
+    text-align: left;
+  }
+
+  /* ボタンサイズをタッチ操作に最適化 */
+  .btn {
+    padding: 12px 20px;
+    font-size: 15px;
+    min-height: 44px; /* iOSのタッチターゲット推奨サイズ */
+  }
+
+  /* モーダルをモバイル用に調整 */
+  .modal-content {
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .modal-header {
+    padding: 16px;
+  }
+
+  .modal-header h3 {
+    font-size: 18px;
+  }
+
+  form {
+    padding: 16px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    padding: 12px;
+    font-size: 16px; /* 16px以上でiOSのズーム防止 */
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  /* 情報表示をモバイル用に調整 */
+  .info-value {
+    font-size: 15px;
+  }
+
+  .history-change {
+    font-size: 15px;
+  }
+
+  .history-note {
+    font-size: 13px;
+  }
+}
+
+/* より小さいスマホ (480px以下) */
+@media (max-width: 480px) {
+  body {
+    padding: 8px;
+  }
+
+  .section {
+    padding: 12px;
+  }
+
+  .section-header h2 {
+    font-size: 16px;
+  }
+
+  .customer-table tr {
+    padding: 12px;
+  }
+
+  .customer-table .name-cell {
+    font-size: 16px;
+  }
+
+  .ticket-badge {
+    font-size: 16px;
+    padding: 8px 16px;
+  }
+
+  .btn {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+
+  .modal-content {
+    width: 98%;
+  }
 }

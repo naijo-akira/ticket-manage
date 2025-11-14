@@ -240,6 +240,48 @@ app.delete('/api/customers/:id', async (c) => {
 })
 
 // ======================
+// API: 顧客情報編集
+// ======================
+app.put('/api/customers/:id', async (c) => {
+  const id = c.req.param('id')
+
+  try {
+    const { name, phone, email, line_user_id } = await c.req.json()
+
+    if (!name) {
+      return c.json({ error: 'Name is required' }, 400)
+    }
+
+    // 既存の顧客を確認
+    const customer = await c.env.DB.prepare(
+      'SELECT * FROM customers WHERE id = ?'
+    ).bind(id).first()
+
+    if (!customer) {
+      return c.json({ error: 'Customer not found' }, 404)
+    }
+
+    const jstNow = getCurrentJSTTimestamp()
+    
+    // 顧客情報を更新（チケット数は編集しない）
+    await c.env.DB.prepare(
+      'UPDATE customers SET name = ?, phone = ?, email = ?, line_user_id = ?, updated_at = ? WHERE id = ?'
+    ).bind(name, phone || null, email || null, line_user_id || null, jstNow, id).run()
+
+    return c.json({ 
+      id, 
+      name, 
+      phone, 
+      email,
+      line_user_id
+    })
+  } catch (error) {
+    console.error('Customer update error:', error)
+    return c.json({ error: 'Failed to update customer' }, 500)
+  }
+})
+
+// ======================
 // フロントエンド
 // ======================
 app.get('/', (c) => {
@@ -343,6 +385,44 @@ app.get('/', (c) => {
                 キャンセル
               </button>
               <button type="submit" class="btn btn-primary">更新</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* 顧客情報編集モーダル */}
+      <div id="editCustomerModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>顧客情報編集</h3>
+            <button onclick="closeEditCustomerModal()" class="btn btn-text">✕</button>
+          </div>
+          <form id="editCustomerForm">
+            <input type="hidden" id="editCustomerId" />
+            <div class="form-group">
+              <label>氏名 *</label>
+              <input type="text" id="editCustomerName" name="name" required />
+            </div>
+            <div class="form-group">
+              <label>電話番号</label>
+              <input type="tel" id="editCustomerPhone" name="phone" />
+            </div>
+            <div class="form-group">
+              <label>メールアドレス</label>
+              <input type="email" id="editCustomerEmail" name="email" />
+            </div>
+            <div class="form-group">
+              <label>LINE User ID（任意）</label>
+              <input type="text" id="editCustomerLineUserId" name="line_user_id" placeholder="U1234567890abcdef..." />
+              <small style="color: #6b7280; font-size: 12px; display: block; margin-top: 4px;">
+                LINEで通知を受け取る場合は、User IDを入力してください
+              </small>
+            </div>
+            <div class="form-actions">
+              <button type="button" onclick="closeEditCustomerModal()" class="btn btn-secondary">
+                キャンセル
+              </button>
+              <button type="submit" class="btn btn-primary">保存</button>
             </div>
           </form>
         </div>
