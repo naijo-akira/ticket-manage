@@ -288,35 +288,50 @@ app.post('/api/line/webhook', async (c) => {
   try {
     const body = await c.req.json()
     
-    console.log('LINE Webhook received:', JSON.stringify(body))
+    console.log('========================================')
+    console.log('LINE Webhook received:', JSON.stringify(body, null, 2))
+    console.log('========================================')
 
     // Webhookイベントを処理
     const events = body.events || []
+    console.log(`Number of events: ${events.length}`)
     
     for (const event of events) {
+      console.log(`Processing event type: ${event.type}`)
+      
       // フォローイベント（友達追加）の処理
       if (event.type === 'follow') {
         const lineUserId = event.source.userId
         
-        console.log(`New follow event: ${lineUserId}`)
+        console.log(`[FOLLOW] User ID: ${lineUserId}`)
+        console.log(`[FOLLOW] ACCESS_TOKEN exists: ${!!c.env.LINE_CHANNEL_ACCESS_TOKEN}`)
         
         // LINE APIからユーザープロフィールを取得
         const profile = await getLineUserProfile(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId)
         
+        console.log(`[FOLLOW] Profile retrieved: ${!!profile}`)
         if (profile) {
+          console.log(`[FOLLOW] Display name: ${profile.displayName}`)
+          
           // 既存顧客チェック
           const existingCustomer = await c.env.DB.prepare(
             'SELECT * FROM customers WHERE line_user_id = ?'
           ).bind(lineUserId).first()
 
+          console.log(`[FOLLOW] Existing customer: ${!!existingCustomer}`)
+
           if (existingCustomer) {
-            console.log(`Customer already exists: ${lineUserId}`)
+            console.log(`[FOLLOW] Customer already exists: ${lineUserId}`)
             
             // ウェルカムメッセージ送信（既存顧客）
             await sendWelcomeMessage(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId, profile.displayName, true)
           } else {
+            console.log(`[FOLLOW] Creating new customer...`)
+            
             // 新規顧客を自動登録
             const jstNow = getCurrentJSTTimestamp()
+            
+            console.log(`[FOLLOW] JST timestamp: ${jstNow}`)
             
             const result = await c.env.DB.prepare(
               'INSERT INTO customers (name, phone, email, ticket_count, line_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -330,25 +345,35 @@ app.post('/api/line/webhook', async (c) => {
               jstNow
             ).run()
 
-            console.log(`New customer created: ${result.meta.last_row_id}`)
+            console.log(`[FOLLOW] DB insert result:`, JSON.stringify(result.meta))
+            console.log(`[FOLLOW] New customer created with ID: ${result.meta.last_row_id}`)
             
             // ウェルカムメッセージ送信（新規顧客）
             await sendWelcomeMessage(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId, profile.displayName, false)
+            console.log(`[FOLLOW] Welcome message sent`)
           }
+        } else {
+          console.error(`[FOLLOW] Failed to get profile for user: ${lineUserId}`)
         }
       }
       
       // アンフォローイベント（ブロック）の処理
       if (event.type === 'unfollow') {
         const lineUserId = event.source.userId
-        console.log(`Unfollow event: ${lineUserId}`)
-        // 必要に応じてデータベースのフラグを更新
+        console.log(`[UNFOLLOW] User ID: ${lineUserId}`)
       }
     }
 
+    console.log('========================================')
+    console.log('Webhook processing completed successfully')
+    console.log('========================================')
+    
     return c.json({ success: true })
   } catch (error) {
+    console.error('========================================')
     console.error('LINE Webhook error:', error)
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
+    console.error('========================================')
     return c.json({ error: 'Webhook processing failed' }, 500)
   }
 })
@@ -357,40 +382,55 @@ app.post('/api/line/webhook', async (c) => {
 // LINE APIヘルパー関数
 // ======================
 async function getLineUserProfile(accessToken: string | undefined, userId: string) {
+  console.log(`[getLineUserProfile] Called for user: ${userId}`)
+  console.log(`[getLineUserProfile] Access token present: ${!!accessToken}`)
+  
   if (!accessToken) {
-    console.log('LINE_CHANNEL_ACCESS_TOKEN is not set')
+    console.error('[getLineUserProfile] LINE_CHANNEL_ACCESS_TOKEN is not set')
     return null
   }
 
   try {
-    const response = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
+    const url = `https://api.line.me/v2/bot/profile/${userId}`
+    console.log(`[getLineUserProfile] Fetching: ${url}`)
+    
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`
       }
     })
 
+    console.log(`[getLineUserProfile] Response status: ${response.status}`)
+
     if (!response.ok) {
-      console.error('Failed to get LINE profile:', await response.text())
+      const errorText = await response.text()
+      console.error('[getLineUserProfile] Failed to get LINE profile:', errorText)
       return null
     }
 
     const profile = await response.json<{ displayName: string; userId: string; pictureUrl?: string; statusMessage?: string }>()
+    console.log(`[getLineUserProfile] Profile retrieved:`, JSON.stringify(profile))
     return profile
   } catch (error) {
-    console.error('LINE profile fetch error:', error)
+    console.error('[getLineUserProfile] Error:', error)
+    console.error('[getLineUserProfile] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
     return null
   }
 }
 
 async function sendWelcomeMessage(accessToken: string | undefined, userId: string, displayName: string, isExisting: boolean) {
+  console.log(`[sendWelcomeMessage] Called for user: ${userId}, displayName: ${displayName}, isExisting: ${isExisting}`)
+  
   if (!accessToken) {
-    console.log('LINE_CHANNEL_ACCESS_TOKEN is not set. Skipping welcome message.')
+    console.error('[sendWelcomeMessage] LINE_CHANNEL_ACCESS_TOKEN is not set. Skipping welcome message.')
     return
   }
 
   const message = isExisting
     ? `${displayName}様\n\nお帰りなさい！\n再度友達追加ありがとうございます。\n\nチケットの残数確認や各種お知らせは、こちらのアカウントからお送りします。`
     : `${displayName}様\n\nダンススクールの公式LINEへようこそ！\n友達追加ありがとうございます🎉\n\nこちらのアカウントでは、チケットの購入・利用状況をお知らせします。\n\n何かご不明な点がございましたら、お気軽にお問い合わせください。`
+
+  console.log(`[sendWelcomeMessage] Message length: ${message.length}`)
 
   try {
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
@@ -410,13 +450,17 @@ async function sendWelcomeMessage(accessToken: string | undefined, userId: strin
       })
     })
 
+    console.log(`[sendWelcomeMessage] Response status: ${response.status}`)
+
     if (!response.ok) {
-      console.error('Failed to send welcome message:', await response.text())
+      const errorText = await response.text()
+      console.error('[sendWelcomeMessage] Failed:', errorText)
     } else {
-      console.log(`Welcome message sent to ${userId}`)
+      console.log(`[sendWelcomeMessage] Success! Message sent to ${userId}`)
     }
   } catch (error) {
-    console.error('Welcome message error:', error)
+    console.error('[sendWelcomeMessage] Error:', error)
+    console.error('[sendWelcomeMessage] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
   }
 }
 
