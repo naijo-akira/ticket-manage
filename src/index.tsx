@@ -282,6 +282,145 @@ app.put('/api/customers/:id', async (c) => {
 })
 
 // ======================
+// LINE Webhook API
+// ======================
+app.post('/api/line/webhook', async (c) => {
+  try {
+    const body = await c.req.json()
+    
+    console.log('LINE Webhook received:', JSON.stringify(body))
+
+    // Webhookイベントを処理
+    const events = body.events || []
+    
+    for (const event of events) {
+      // フォローイベント（友達追加）の処理
+      if (event.type === 'follow') {
+        const lineUserId = event.source.userId
+        
+        console.log(`New follow event: ${lineUserId}`)
+        
+        // LINE APIからユーザープロフィールを取得
+        const profile = await getLineUserProfile(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId)
+        
+        if (profile) {
+          // 既存顧客チェック
+          const existingCustomer = await c.env.DB.prepare(
+            'SELECT * FROM customers WHERE line_user_id = ?'
+          ).bind(lineUserId).first()
+
+          if (existingCustomer) {
+            console.log(`Customer already exists: ${lineUserId}`)
+            
+            // ウェルカムメッセージ送信（既存顧客）
+            await sendWelcomeMessage(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId, profile.displayName, true)
+          } else {
+            // 新規顧客を自動登録
+            const jstNow = getCurrentJSTTimestamp()
+            
+            const result = await c.env.DB.prepare(
+              'INSERT INTO customers (name, phone, email, ticket_count, line_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            ).bind(
+              profile.displayName,
+              null,
+              null,
+              0,
+              lineUserId,
+              jstNow,
+              jstNow
+            ).run()
+
+            console.log(`New customer created: ${result.meta.last_row_id}`)
+            
+            // ウェルカムメッセージ送信（新規顧客）
+            await sendWelcomeMessage(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId, profile.displayName, false)
+          }
+        }
+      }
+      
+      // アンフォローイベント（ブロック）の処理
+      if (event.type === 'unfollow') {
+        const lineUserId = event.source.userId
+        console.log(`Unfollow event: ${lineUserId}`)
+        // 必要に応じてデータベースのフラグを更新
+      }
+    }
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('LINE Webhook error:', error)
+    return c.json({ error: 'Webhook processing failed' }, 500)
+  }
+})
+
+// ======================
+// LINE APIヘルパー関数
+// ======================
+async function getLineUserProfile(accessToken: string | undefined, userId: string) {
+  if (!accessToken) {
+    console.log('LINE_CHANNEL_ACCESS_TOKEN is not set')
+    return null
+  }
+
+  try {
+    const response = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    })
+
+    if (!response.ok) {
+      console.error('Failed to get LINE profile:', await response.text())
+      return null
+    }
+
+    const profile = await response.json<{ displayName: string; userId: string; pictureUrl?: string; statusMessage?: string }>()
+    return profile
+  } catch (error) {
+    console.error('LINE profile fetch error:', error)
+    return null
+  }
+}
+
+async function sendWelcomeMessage(accessToken: string | undefined, userId: string, displayName: string, isExisting: boolean) {
+  if (!accessToken) {
+    console.log('LINE_CHANNEL_ACCESS_TOKEN is not set. Skipping welcome message.')
+    return
+  }
+
+  const message = isExisting
+    ? `${displayName}様\n\nお帰りなさい！\n再度友達追加ありがとうございます。\n\nチケットの残数確認や各種お知らせは、こちらのアカウントからお送りします。`
+    : `${displayName}様\n\nダンススクールの公式LINEへようこそ！\n友達追加ありがとうございます🎉\n\nこちらのアカウントでは、チケットの購入・利用状況をお知らせします。\n\n何かご不明な点がございましたら、お気軽にお問い合わせください。`
+
+  try {
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        to: userId,
+        messages: [
+          {
+            type: 'text',
+            text: message
+          }
+        ]
+      })
+    })
+
+    if (!response.ok) {
+      console.error('Failed to send welcome message:', await response.text())
+    } else {
+      console.log(`Welcome message sent to ${userId}`)
+    }
+  } catch (error) {
+    console.error('Welcome message error:', error)
+  }
+}
+
+// ======================
 // フロントエンド
 // ======================
 app.get('/', (c) => {
