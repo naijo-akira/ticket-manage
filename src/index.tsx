@@ -322,9 +322,6 @@ app.post('/api/line/webhook', async (c) => {
 
           if (existingCustomer) {
             console.log(`[FOLLOW] Customer already exists: ${lineUserId}`)
-            
-            // ウェルカムメッセージ送信（既存顧客）
-            await sendWelcomeMessage(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId, profile.displayName, true)
           } else {
             console.log(`[FOLLOW] Creating new customer...`)
             
@@ -347,10 +344,6 @@ app.post('/api/line/webhook', async (c) => {
 
             console.log(`[FOLLOW] DB insert result:`, JSON.stringify(result.meta))
             console.log(`[FOLLOW] New customer created with ID: ${result.meta.last_row_id}`)
-            
-            // ウェルカムメッセージ送信（新規顧客）
-            await sendWelcomeMessage(c.env.LINE_CHANNEL_ACCESS_TOKEN, lineUserId, profile.displayName, false)
-            console.log(`[FOLLOW] Welcome message sent`)
           }
         } else {
           console.error(`[FOLLOW] Failed to get profile for user: ${lineUserId}`)
@@ -415,52 +408,6 @@ async function getLineUserProfile(accessToken: string | undefined, userId: strin
     console.error('[getLineUserProfile] Error:', error)
     console.error('[getLineUserProfile] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
     return null
-  }
-}
-
-async function sendWelcomeMessage(accessToken: string | undefined, userId: string, displayName: string, isExisting: boolean) {
-  console.log(`[sendWelcomeMessage] Called for user: ${userId}, displayName: ${displayName}, isExisting: ${isExisting}`)
-  
-  if (!accessToken) {
-    console.error('[sendWelcomeMessage] LINE_CHANNEL_ACCESS_TOKEN is not set. Skipping welcome message.')
-    return
-  }
-
-  const message = isExisting
-    ? `${displayName}様\n\nお帰りなさい！\n再度友達追加ありがとうございます。\n\nチケットの残数確認や各種お知らせは、こちらのアカウントからお送りします。`
-    : `${displayName}様\n\nダンススクールの公式LINEへようこそ！\n友達追加ありがとうございます🎉\n\nこちらのアカウントでは、チケットの購入・利用状況をお知らせします。\n\n何かご不明な点がございましたら、お気軽にお問い合わせください。`
-
-  console.log(`[sendWelcomeMessage] Message length: ${message.length}`)
-
-  try {
-    const response = await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({
-        to: userId,
-        messages: [
-          {
-            type: 'text',
-            text: message
-          }
-        ]
-      })
-    })
-
-    console.log(`[sendWelcomeMessage] Response status: ${response.status}`)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('[sendWelcomeMessage] Failed:', errorText)
-    } else {
-      console.log(`[sendWelcomeMessage] Success! Message sent to ${userId}`)
-    }
-  } catch (error) {
-    console.error('[sendWelcomeMessage] Error:', error)
-    console.error('[sendWelcomeMessage] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
   }
 }
 
